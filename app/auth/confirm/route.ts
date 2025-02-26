@@ -21,6 +21,22 @@ export async function GET(request: NextRequest) {
       // redirect user to specified redirect URL or root of app
       redirect(next)
     }
+    // Get the user after successful verification
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (user) {
+        // Insert the user's UUID into the profiles table
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({ 
+                id: user.id,
+                // All other fields will be null/empty by default
+            });
+        
+        if (profileError) {
+            console.error('Error creating profile:', profileError);
+        }
+    }
   }
 
   // redirect the user to an error page with some instructions
