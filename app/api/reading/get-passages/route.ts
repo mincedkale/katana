@@ -61,28 +61,19 @@ export async function POST(request: NextRequest) {
         for (let i = 0; i < amount; i++) {
             const wordsSlice = response.data.slice(i * numWordsPerPassage, (i + 1) * numWordsPerPassage);
             const words = wordsSlice.map(({ expression, meaning }) => ({ expression, meaning }));
-            const msg = await anthropic.messages.create({
-                model: "claude-3-7-sonnet-20250219",
-                max_tokens: 20000,
-                temperature: 1,
-                messages: [
-                {
-                    "role": "user",
-                    "content": [
-                    {
-                        "type": "text",
-                        "text": `You are tasked with creating a simple Japanese passage for language learners. 
+            const req = `You are tasked with creating a simple Japanese passage for language learners. 
                         Your goal is to craft a passage that incorporates specific grammar patterns and vocabulary 
                         while maintaining an appropriate difficulty level.\n\nHere are the input variables you will 
                         work with:\n\n<sentence_length>\n${sentences}\n</sentence_length>\n\n<grammar_patterns>\n
-                        ${grammar}\n</grammar_patterns>\n\n<n_level>\n${level}\n</n_level>\n\n<words>\n
-                        ${words.toString()}\n</words>\n\nFollow these steps to create the passage:\n\n1. Grammar Patterns:\n   - 
+                        ${grammar}\n</grammar_patterns>\n\n<n_level>\n${level}\n</n_level>\n\n<words to specifically and mainly incorporate>\n
+                        ${JSON.stringify(words)}\n<words to specifically and mainly incorporate>>\n\nFollow these steps to create the passage:\n\n1. Grammar Patterns:\n   - 
                         If grammar patterns are provided in the <grammar_patterns> section, incorporate them into your passage.\n  
                         - If no patterns are given or not enough are provided, use grammar and sentence structures appropriate 
-                        for Japanese Level N${level}.\n\n2. Vocabulary:\n   - Include all the words provided in the <words> 
+                        for Japanese Level N${level}.\n\n2. Vocabulary:\n   - Include all the words provided in the <words to specifically and mainly incorporate>
                         section in your passage.\n   - Supplement these with other common words suitable for Japanese Level 
-                        N${level}.\n\n3. Difficulty Level:\n   - Tailor the overall difficulty of the passage to Japanese 
-                        Level N${level}.\n   - Use vocabulary, kanji, and grammatical structures that align with this level.
+                        N${level} though these SHOULD NOT be your main focus. You must only reference vocabulary included in <words to specifically and mainly
+                        incorporate> within your explanation response. \n\n3. Difficulty Level:\n   - Tailor the overall difficulty of the passage to Japanese 
+                        Level N${level}.\n   - Use vocabulary (given here or otherwise), kanji, and grammatical structures that align with this level.
                         \n\n4. Length:\n   - Aim for a passage length of approximately ${sentences}.\n   
                         - This can be interpreted as either the number of sentences or the total character count, 
                         depending on what seems more appropriate for the given N${level}.\n\n5. Content:\n   
@@ -95,7 +86,19 @@ export async function POST(request: NextRequest) {
                         creating a passage that is both educational and engaging for language learners at the specified level.\n\n
                         Please make ensure that the entirety of your response is able to be parsed into JSON format. This means
                         that all strings must be enclosed in double quotes, and all keys must be enclosed in double quotes as well. All
-                        with no extra spaces, line breaks (such as \\n), or any other words.`
+                        with no extra spaces, line breaks (such as \\n), or any other words.`;
+            console.log(req);
+            const msg = await anthropic.messages.create({
+                model: "claude-3-7-sonnet-20250219",
+                max_tokens: 20000,
+                temperature: 1,
+                messages: [
+                {
+                    "role": "user",
+                    "content": [
+                    {
+                        "type": "text",
+                        "text": req
                     }
                     ]
                 }
@@ -109,7 +112,42 @@ export async function POST(request: NextRequest) {
                     { status: 500 }
                 );
             }
-            const responseOjb = JSON.parse(responseText) as ClaudeResponse;
+            let responseOjb;
+            try {
+                responseOjb = JSON.parse(responseText) as ClaudeResponse;
+            } catch (error) {
+                const msg = await anthropic.messages.create({
+                    model: "claude-3-7-sonnet-20250219",
+                    max_tokens: 20000,
+                    temperature: 1,
+                    messages: [
+                    {
+                        "role": "user",
+                        "content": [
+                        {
+                            "type": "text",
+                            "text": `You are tasked with formatting this passage into a valid string JSON object able to be
+                            run through JSON.parse(). The format should be as follows: {\n
+                            "japanese": "string"\n
+                            "english": "string"\n
+                            "explanation": "string"\n} Do not include any extra spaces, line breaks, or any other words. Your response should
+                            be able to be parsed into JSON format without any issues. Keep the content of the passage the same, but ensure that it is
+                            formatted correctly.`
+                        }
+                        ]
+                    }
+                    ]
+                });
+                let responseText = msg.content[0].type === 'text' && msg.content[0].text;
+                if (!responseText) {
+                    return NextResponse.json(
+                        { error: 'Failed to generate passage' },
+                        { status: 500 }
+                    );
+                }
+                responseOjb = JSON.parse(responseText) as ClaudeResponse;
+            }
+            
             const passage = {
                 texts: responseOjb,
                 words: words
