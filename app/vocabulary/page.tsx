@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { Container, Typography, Box, Tabs, Tab, Paper, List, ListItem, ListItemText, Chip, CircularProgress } from '@mui/material';
+import { createClient } from '@/utils/supabase/client';
+import { redirect } from 'next/navigation';
 
 interface VocabularyWord {
     core_index: string;
@@ -10,7 +12,15 @@ interface VocabularyWord {
     confidence: number;
 }
 
-export default function VocabularyPage() {
+export default async function VocabularyPage() {
+
+    const supabase = await createClient()
+
+    const { data, error } = await supabase.auth.getUser()
+    if (error || !data?.user) {
+        redirect('/login')
+    }
+
     const [activeTab, setActiveTab] = useState(0);
     const [words, setWords] = useState<VocabularyWord[]>([]);
     const [loading, setLoading] = useState(true);

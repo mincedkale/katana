@@ -1,12 +1,6 @@
-"use client";
-import { useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
 
-
-
-
-export default function Home() {
+export default function HomePage() {
     const directories = [
         {
             name: "Tango (単語リスト)",
@@ -57,16 +51,14 @@ export default function Home() {
                 </header>
     
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 justify-items-center">
-                    {directories.map((dir, index) => (
+                    {directories.map((dir) => (
                         <Link href={dir.path} key={dir.name} className="w-full flex justify-center">
-                            <motion.div 
-                                className={`${dir.color} rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow cursor-pointer text-white text-center w-full max-w-xs`}
-                                whileHover={{ scale: 1.03 }}
-                                whileTap={{ scale: 0.98 }}
+                            <div 
+                                className={`${dir.color} rounded-lg p-6 shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-[1.03] active:scale-[0.98] cursor-pointer text-white text-center w-full max-w-xs`}
                             >
                                 <h2 className="text-2xl font-bold mb-2">{dir.name}</h2>
                                 <p className="opacity-90">{dir.description}</p>
-                            </motion.div>
+                            </div>
                         </Link>
                     ))}
                 </div>
