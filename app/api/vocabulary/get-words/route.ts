@@ -17,14 +17,16 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { data, error } = await supabase
+        const response = await supabase
             .from('user_words')
             .select('meaning, confidence, expression, last_reviewed_at')
             .eq('user_id', user.id)
             .order('last_reviewed_at', { ascending: true })
             .limit(number);
 
-        return NextResponse.json({ data, error });
+        console.log(`response`, response);
+
+        return NextResponse.json({ data: response.data });
     } catch (error) {
         console.error('Error getting words:', error);
         return NextResponse.json(

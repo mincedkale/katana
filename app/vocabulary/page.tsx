@@ -2,22 +2,36 @@
 import { useState, useEffect } from 'react';
 import { Container, Typography, Box, Tabs, Tab, Paper, List, ListItem, ListItemText, Chip, CircularProgress } from '@mui/material';
 
-
-
 interface VocabularyWord {
-    id: string;
-    word: string;
-    translation: string;
-    learned: boolean;
-    lastReviewed: Date;
-    proficiencyLevel: number; // 0-100
+    core_index: string;
+    expression: string;
+    meaning: string;
+    last_reviewed_at: string;
+    confidence: number;
 }
 
 export default function VocabularyPage() {
     const [activeTab, setActiveTab] = useState(0);
-    const [learningWords, setLearningWords] = useState<VocabularyWord[]>([]);
-    const [learnedWords, setLearnedWords] = useState<VocabularyWord[]>([]);
+    const [words, setWords] = useState<VocabularyWord[]>([]);
     const [loading, setLoading] = useState(true);
+    const [addFromCoreNumber, setAddFromCoreNumber] = useState(100);
+
+
+    const addVocabularyFromCore = async () => {
+        try {
+            const response = await fetch('/api/vocabulary/add-from-core', {
+                method: 'POST',
+                body: JSON.stringify({ amount: addFromCoreNumber }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+            console.log(data);
+        } catch (error) {
+            console.error('Failed to add vocabulary from core:', error);
+        }
+    };
 
     useEffect(() => {
         // Fetch vocabulary data
@@ -32,16 +46,9 @@ export default function VocabularyPage() {
                     }
                     });
                 const data = await response.json();
-                
-                // Split words into learning and learned categories
-                const learning = data.filter((word: VocabularyWord) => !word.learned);
-                const learned = data.filter((word: VocabularyWord) => word.learned)
-                    .sort((a: VocabularyWord, b: VocabularyWord) => 
-                        new Date(b.lastReviewed).getTime() - new Date(a.lastReviewed).getTime())
-                    .slice(0, 100); // Get only the 100 most recently learned
-                
-                setLearningWords(learning);
-                setLearnedWords(learned);
+                console.log(data);
+                setWords(data.data);
+                console.log(words);
             } catch (error) {
                 console.error('Failed to fetch vocabulary:', error);
             } finally {
@@ -83,65 +90,93 @@ export default function VocabularyPage() {
             
             <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
                 <Tabs value={activeTab} onChange={handleTabChange}>
-                    <Tab label={`Currently Learning (${learningWords.length})`} />
-                    <Tab label={`Recently Learned (${learnedWords.length})`} />
+                    <Tab label={`Currently Learning (${words.length})`} />
                 </Tabs>
             </Box>
-
-            {activeTab === 0 && (
-                <Paper elevation={2}>
-                    <List>
-                        {learningWords.length > 0 ? (
-                            learningWords.map((word) => (
-                                <ListItem key={word.id} divider>
-                                    <ListItemText 
-                                        primary={word.word} 
-                                        secondary={word.translation} 
-                                    />
-                                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                        {renderProficiencyChip(word.proficiencyLevel)}
-                                    </Box>
-                                </ListItem>
-                            ))
-                        ) : (
-                            <ListItem>
-                                <ListItemText primary="No words currently being learned." />
+            <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+                <Typography variant="h6" gutterBottom>
+                    Add More Vocabulary
+                </Typography>
+                
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {/* From Core List Section */}
+                    <Box>
+                        <Typography variant="subtitle1" gutterBottom>
+                            From Core List
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
+                            <Chip 
+                                label="25 Words" 
+                                onClick={() => setAddFromCoreNumber(25)}
+                                variant={addFromCoreNumber === 25 ? 'filled' : 'outlined'} 
+                                color="primary"
+                            />
+                            <Chip 
+                                label="50 Words" 
+                                onClick={() => setAddFromCoreNumber(50)}
+                                variant={addFromCoreNumber === 50 ? 'filled' : 'outlined'} 
+                                color="primary"
+                            />
+                            <Chip 
+                                label="100 Words" 
+                                onClick={() => setAddFromCoreNumber(100)}
+                                variant={addFromCoreNumber === 100 ? 'filled' : 'outlined'} 
+                                color="primary"
+                            />
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                            <Chip
+                                label="Add Core Words"
+                                onClick={addVocabularyFromCore}
+                                color="primary"
+                                sx={{ cursor: 'pointer', px: 2 }}
+                            />
+                        </Box>
+                    </Box>
+                    
+                    {/* From Categories Section (Separate) */}
+                    <Box>
+                        <Typography variant="subtitle1" gutterBottom>
+                            Add Category Deck
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+                            <Chip label="Greetings" onClick={() => {}} variant="outlined" color="secondary" />
+                            <Chip label="Food & Drink" onClick={() => {}} variant="outlined" color="secondary" />
+                            <Chip label="Travel" onClick={() => {}} variant="outlined" color="secondary" />
+                            <Chip label="Business" onClick={() => {}} variant="outlined" color="secondary" />
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                            <Chip
+                                label="Add Selected Category"
+                                onClick={() => {}}
+                                color="secondary"
+                                sx={{ cursor: 'pointer', px: 2 }}
+                            />
+                        </Box>
+                    </Box>
+                </Box>
+            </Box>
+            <Paper elevation={2}>
+                <List>
+                    {words.length > 0 ? (
+                        words.map((word) => (
+                            <ListItem key={word.core_index} divider>
+                                <ListItemText 
+                                    primary={word.expression} 
+                                    secondary={word.meaning} 
+                                />
+                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                    {renderProficiencyChip(word.confidence)}
+                                </Box>
                             </ListItem>
-                        )}
-                    </List>
-                </Paper>
-            )}
-
-            {activeTab === 1 && (
-                <Paper elevation={2}>
-                    <List>
-                        {learnedWords.length > 0 ? (
-                            learnedWords.map((word) => (
-                                <ListItem key={word.id} divider>
-                                    <ListItemText 
-                                        primary={word.word} 
-                                        secondary={
-                                            <>
-                                                {word.translation}
-                                                <Typography variant="caption" display="block" color="text.secondary">
-                                                    Learned: {new Date(word.lastReviewed).toLocaleDateString()}
-                                                </Typography>
-                                            </>
-                                        } 
-                                    />
-                                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                        {renderProficiencyChip(word.proficiencyLevel)}
-                                    </Box>
-                                </ListItem>
-                            ))
-                        ) : (
-                            <ListItem>
-                                <ListItemText primary="No words have been learned yet." />
-                            </ListItem>
-                        )}
-                    </List>
-                </Paper>
-            )}
+                        ))
+                    ) : (
+                        <ListItem>
+                            <ListItemText primary="No words currently being learned." />
+                        </ListItem>
+                    )}
+                </List>
+            </Paper>
         </Container>
     );
 }
